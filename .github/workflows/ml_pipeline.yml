@@ -11,24 +11,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # -----------------------------
+    # 1. CHECKOUT REPOSITORY
+    # -----------------------------
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    # -----------------------------
+    # 2. SETUP PYTHON
+    # -----------------------------
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
+    # -----------------------------
+    # 3. INSTALL DEPENDENCIES
+    # -----------------------------
     - name: Install dependencies
       run: |
-        pip install --upgrade pip
+        python -m pip install --upgrade pip
         pip install -r requirements_ci.txt
 
-    - #name: Lint Code
-     # run: |
-      #  pip install flake8
-      #  flake8 --max-line-length=100 .
+    # -----------------------------
+    # 4. (OPTIONAL) DISABLED LINTING
+    # -----------------------------
+    # - name: Lint Code
+    #   run: |
+    #     pip install flake8
+    #     flake8 --max-line-length=100 .
 
-    - name: Run Unit Tests (fast tests only)
+    # -----------------------------
+    # 5. RUN UNIT TESTS
+    # -----------------------------
+    - name: Run Federated Learning Unit Tests
       run: |
         python test_federated_learning.py
