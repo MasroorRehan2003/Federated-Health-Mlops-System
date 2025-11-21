@@ -65,10 +65,19 @@ pip install -r requirements.txt
 docker-compose up -d
 
 # Or run individual components
+
+# 1. Generate data
 python src/data_ingestion/main.py
-python src/federated_learning/server.py
-python src/api/main.py
-streamlit run dashboards/health_authorities_dashboard.py
+
+# 2. Run federated learning (requires multiple terminals or Docker)
+python src/federated_learning/fl_server.py  # Terminal 1
+python src/federated_learning/fl_client.py --node-name hospital_A  # Terminal 2
+python src/federated_learning/fl_client.py --node-name hospital_B  # Terminal 3
+python src/federated_learning/fl_client.py --node-name hospital_C  # Terminal 4
+
+# 3. Run dashboards
+streamlit run dashboards/health_authorities_dashboard.py  # Health authorities dashboard
+streamlit run dashboards/citizens_dashboard.py  # Citizens dashboard
 ```
 
 ## Components
@@ -92,8 +101,19 @@ Implements federated learning using Flower framework:
 - CI/CD integration
 
 ### 4. Dashboards
-- Health Authorities Dashboard: Risk maps, alerts, trends
-- Citizens Dashboard: Personal alerts and health trends
+- **Health Authorities Dashboard** (`dashboards/health_authorities_dashboard.py`)
+  - Regional risk comparison
+  - Real-time alerts and notifications
+  - Risk trends over time
+  - Environmental factor monitoring
+  - Multi-region visualization
+  
+- **Citizens Dashboard** (`dashboards/citizens_dashboard.py`)
+  - Personal health status
+  - Individual health alerts
+  - Personal health trends
+  - Health recommendations
+  - Environmental conditions
 
 ## Documentation
 

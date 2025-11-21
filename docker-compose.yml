@@ -1,199 +1,50 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  # Data Ingestion Service
-  data-ingestion:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.data-ingestion
-    container_name: data-ingestion
-    environment:
-      - REDIS_HOST=redis
-      - KAFKA_BROKER=kafka:9092
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - redis
-      - kafka
-    networks:
-      - mlops-network
-
-  # Federated Learning Server
   fl-server:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.fl-server
+    build: .
     container_name: fl-server
+    command: ["python", "src/federated_learning/fl_server.py", "--address", "0.0.0.0:8080"]
     ports:
-      - "8080:8080"
+      - "8080:8080"       # IMPORTANT FIX
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SERVER_ADDRESS=0.0.0.0:8080
     volumes:
-      - ./data/models:/app/models
-    depends_on:
-      - mlflow
-      - postgres
-    networks:
-      - mlops-network
+      - .:/app
+    restart: unless-stopped
 
-  # Federated Learning Clients (Node 1 - Hospital)
-  fl-client-1:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.fl-client
-    container_name: fl-client-1
-    environment:
-      - NODE_ID=hospital_1
-      - FL_SERVER_HOST=fl-server
-      - FL_SERVER_PORT=8080
-    volumes:
-      - ./data/raw:/app/data/raw
+  fl-client-hospital-a:
+    build: .
+    container_name: fl-client-hospital-a
     depends_on:
       - fl-server
-    networks:
-      - mlops-network
-
-  # Federated Learning Client (Node 2 - City)
-  fl-client-2:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.fl-client
-    container_name: fl-client-2
+    command: ["python", "src/federated_learning/fl_client.py", "--node-name", "hospital_A"]
     environment:
-      - NODE_ID=city_1
-      - FL_SERVER_HOST=fl-server
-      - FL_SERVER_PORT=8080
+      - SERVER_ADDRESS=fl-server:8080      # CRITICAL FIX
     volumes:
-      - ./data/raw:/app/data/raw
+      - .:/app
+    restart: unless-stopped
+
+  fl-client-hospital-b:
+    build: .
+    container_name: fl-client-hospital-b
     depends_on:
       - fl-server
-    networks:
-      - mlops-network
-
-  # API Service
-  api:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
-    container_name: api-service
-    ports:
-      - "8000:8000"
+    command: ["python", "src/federated_learning/fl_client.py", "--node-name", "hospital_B"]
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - REDIS_HOST=redis
-    depends_on:
-      - mlflow
-      - redis
-      - postgres
-    networks:
-      - mlops-network
-
-  # MLflow Tracking Server
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.7.1
-    container_name: mlflow-server
-    ports:
-      - "5000:5000"
-    environment:
-      - BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
-      - DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+      - SERVER_ADDRESS=fl-server:8080
     volumes:
-      - mlflow-artifacts:/mlflow/artifacts
-    depends_on:
-      - postgres
-    networks:
-      - mlops-network
+      - .:/app
+    restart: unless-stopped
 
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15
-    container_name: postgres-db
+  fl-client-hospital-c:
+    build: .
+    container_name: fl-client-hospital-c
+    depends_on:
+      - fl-server
+    command: ["python", "src/federated_learning/fl_client.py", "--node-name", "hospital_C"]
     environment:
-      - POSTGRES_USER=mlflow
-      - POSTGRES_PASSWORD=mlflow
-      - POSTGRES_DB=mlflow
+      - SERVER_ADDRESS=fl-server:8080
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - mlops-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: redis-cache
-    ports:
-      - "6379:6379"
-    networks:
-      - mlops-network
-
-  # Kafka Message Broker
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - mlops-network
-
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    container_name: kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      - mlops-network
-
-  # Health Authorities Dashboard
-  dashboard-auth:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.dashboard
-    container_name: dashboard-authorities
-    ports:
-      - "8501:8501"
-    environment:
-      - DASHBOARD_TYPE=authorities
-    volumes:
-      - ./dashboards:/app/dashboards
-      - ./data:/app/data
-    depends_on:
-      - api
-    networks:
-      - mlops-network
-
-  # Citizens Dashboard
-  dashboard-citizens:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.dashboard
-    container_name: dashboard-citizens
-    ports:
-      - "8502:8501"
-    environment:
-      - DASHBOARD_TYPE=citizens
-    volumes:
-      - ./dashboards:/app/dashboards
-      - ./data:/app/data
-    depends_on:
-      - api
-    networks:
-      - mlops-network
-
-volumes:
-  postgres-data:
-  mlflow-artifacts:
-
-networks:
-  mlops-network:
-    driver: bridge
-
+      - .:/app
+    restart: unless-stopped
