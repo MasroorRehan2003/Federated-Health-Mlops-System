@@ -11,39 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # -----------------------------
-    # 1. CHECKOUT REPOSITORY
-    # -----------------------------
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # -----------------------------
-    # 2. SETUP PYTHON
-    # -----------------------------
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
-    # -----------------------------
-    # 3. INSTALL DEPENDENCIES
-    # -----------------------------
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        pip install --upgrade pip
         pip install -r requirements_ci.txt
 
-    # -----------------------------
-    # 4. (OPTIONAL) DISABLED LINTING
-    # -----------------------------
-    # - name: Lint Code
-    #   run: |
-    #     pip install flake8
-    #     flake8 --max-line-length=100 .
+    - name: Create required directories
+      run: |
+        mkdir -p data/raw
+        mkdir -p data/processed
+        mkdir -p data/models
 
-    # -----------------------------
-    # 5. RUN UNIT TESTS
-    # -----------------------------
+    - name: Run Data Pipeline (Phase 1)
+      run: |
+        python src/data_ingestion/main.py
+
     - name: Run Federated Learning Unit Tests
       run: |
         python test_federated_learning.py
